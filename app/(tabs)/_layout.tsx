@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform, View, StyleSheet, Text } from 'react-native';
-import { Chrome as Home, Search, SquarePlus as PlusSquare, Heart, User } from 'lucide-react-native';
+import { Chrome as Home, Search, SquarePlus as PlusSquare, Heart, User, CreditCard } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/constants/theme';
 
@@ -47,6 +47,15 @@ export default function TabLayout() {
           title: 'Activity',
           tabBarIcon: ({ color, size }) => (
             <Heart size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="subscribe"
+        options={{
+          title: 'Subscribe',
+          tabBarIcon: ({ color, size }) => (
+            <CreditCard size={size} color={color} />
           ),
         }}
       />

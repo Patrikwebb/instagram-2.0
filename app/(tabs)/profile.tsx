@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,17 +9,48 @@ import {
   Image,
   Dimensions,
   FlatList,
+  Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { theme } from '@/constants/theme';
 import { ProfileHeader } from '@/components/ProfileHeader';
 import { USERS, POSTS } from '@/data/mockData';
-import { Grid2x2 as Grid, Film, Bookmark, User as UserTag } from 'lucide-react-native';
+import { Grid2x2 as Grid, Film, Bookmark, User as UserTag, LogIn, LogOut } from 'lucide-react-native';
+import { authMethods, supabase } from '@/lib/supabase/auth';
 
 type TabType = 'posts' | 'reels' | 'saved' | 'tagged';
 
 export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('posts');
-  const user = USERS[0]; // Using the first user as the current user
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check current user on mount
+    const checkUser = async () => {
+      try {
+        const currentUser = await authMethods.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        setUser(null);
+      }
+    };
+    checkUser();
+  }, []);
+
+  const handleLogin = () => {
+    router.push('/login');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authMethods.signOut();
+      setUser(null);
+      Alert.alert('Logged Out', 'You have been successfully logged out.');
+    } catch (error: any) {
+      Alert.alert('Logout Error', error.message);
+    }
+  };
   
   const renderTabContent = () => {
     switch (activeTab) {
@@ -39,66 +70,96 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerUsername}>{user.username}</Text>
-      </View>
-
-      <ScrollView>
-        <ProfileHeader
-          username={user.username}
-          name={user.name}
-          avatar={user.avatar}
-          bio={user.bio}
-          posts={user.posts}
-          followers={user.followers}
-          following={user.following}
-          isVerified={user.isVerified}
-        />
-
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
-            onPress={() => setActiveTab('posts')}
-          >
-            <Grid 
+        <Text style={styles.headerUsername}>
+          {user ? user.email : 'Profile'}
+        </Text>
+        <TouchableOpacity 
+          style={styles.authButton} 
+          onPress={user ? handleLogout : handleLogin}
+        >
+          {user ? (
+            <LogOut 
               size={24} 
               color={theme.colors.text.primary} 
-              strokeWidth={activeTab === 'posts' ? 2.5 : 1.5}
             />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'reels' && styles.activeTab]}
-            onPress={() => setActiveTab('reels')}
-          >
-            <Film 
+          ) : (
+            <LogIn 
               size={24} 
-              color={theme.colors.text.primary}
-              strokeWidth={activeTab === 'reels' ? 2.5 : 1.5}
+              color={theme.colors.text.primary} 
             />
-          </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {user ? (
+        <ScrollView>
+          <ProfileHeader
+            username={user.email || 'User'}
+            name={user.email || 'User'}
+            avatar={USERS[0].avatar}
+            bio={USERS[0].bio}
+            posts={USERS[0].posts}
+            followers={USERS[0].followers}
+            following={USERS[0].following}
+            isVerified={false}
+          />
+
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
+              onPress={() => setActiveTab('posts')}
+            >
+              <Grid 
+                size={24} 
+                color={theme.colors.text.primary} 
+                strokeWidth={activeTab === 'posts' ? 2.5 : 1.5}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'reels' && styles.activeTab]}
+              onPress={() => setActiveTab('reels')}
+            >
+              <Film 
+                size={24} 
+                color={theme.colors.text.primary}
+                strokeWidth={activeTab === 'reels' ? 2.5 : 1.5}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
+              onPress={() => setActiveTab('saved')}
+            >
+              <Bookmark 
+                size={24} 
+                color={theme.colors.text.primary}
+                strokeWidth={activeTab === 'saved' ? 2.5 : 1.5}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'tagged' && styles.activeTab]}
+              onPress={() => setActiveTab('tagged')}
+            >
+              <UserTag 
+                size={24} 
+                color={theme.colors.text.primary}
+                strokeWidth={activeTab === 'tagged' ? 2.5 : 1.5}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {renderTabContent()}
+        </ScrollView>
+      ) : (
+        <View style={styles.loginContainer}>
+          <Text style={styles.loginText}>Please log in to view your profile</Text>
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
-            onPress={() => setActiveTab('saved')}
+            style={styles.loginButton} 
+            onPress={handleLogin}
           >
-            <Bookmark 
-              size={24} 
-              color={theme.colors.text.primary}
-              strokeWidth={activeTab === 'saved' ? 2.5 : 1.5}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'tagged' && styles.activeTab]}
-            onPress={() => setActiveTab('tagged')}
-          >
-            <UserTag 
-              size={24} 
-              color={theme.colors.text.primary}
-              strokeWidth={activeTab === 'tagged' ? 2.5 : 1.5}
-            />
+            <Text style={styles.loginButtonText}>Log In</Text>
           </TouchableOpacity>
         </View>
-
-        {renderTabContent()}
-      </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -190,5 +251,31 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.md,
     color: theme.colors.text.secondary,
     fontFamily: theme.fontFamily.semiBold,
+  },
+  authButton: {
+    position: 'absolute',
+    right: theme.spacing.md,
+  },
+  loginContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+  },
+  loginText: {
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.md,
+  },
+  loginButton: {
+    backgroundColor: theme.colors.button.primary,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: 'white',
+    fontSize: theme.fontSize.md,
+    fontFamily: theme.fontFamily.bold,
   },
 });
