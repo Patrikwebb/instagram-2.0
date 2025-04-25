@@ -84,4 +84,35 @@ export const authMethods = {
 // Authentication State Listener
 export const onAuthStateChange = (callback: (event: string, session: any) => void) => {
   return supabase.auth.onAuthStateChange(callback)
-} 
+}
+
+const AUTH_TOKEN_KEY = 'user_jwt_token'
+
+export const AuthStorage = {
+  async saveToken(token: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, token)
+    } catch (error) {
+      console.error('Error saving auth token:', error)
+    }
+  },
+
+  async getToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(AUTH_TOKEN_KEY)
+    } catch (error) {
+      console.error('Error retrieving auth token:', error)
+      return null
+    }
+  },
+
+  async removeToken(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(AUTH_TOKEN_KEY)
+    } catch (error) {
+      console.error('Error removing auth token:', error)
+    }
+  }
+}
+
+export default AuthStorage 

@@ -1,20 +1,67 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image, Alert } from 'react-native';
 import { theme } from '@/constants/theme';
 import { STRIPE_PRODUCTS } from '@/src/stripe-config';
 import { useStripeCheckout } from '@/hooks/useStripeCheckout';
 import { Sparkles } from 'lucide-react-native';
+import { createClient } from '@supabase/supabase-js';
+import AuthStorage from '../../lib/supabase/auth';
+import Constants from 'expo-constants';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env?.EXPO_PUBLIC_SUPABASE_URL ?? '', 
+  process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
+);
 
 export default function SubscribeScreen() {
   const { createCheckoutSession, isLoading } = useStripeCheckout();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check authentication status
+  const checkAuthStatus = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // Save the JWT token to storage
+        await AuthStorage.saveToken(session.access_token);
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        // Prompt user to sign in
+        Alert.alert(
+          'Authentication Required', 
+          'Please sign in to subscribe', 
+          [{ text: 'OK' }]
+        );
+        setIsAuthenticated(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('Authentication check error:', error);
+      Alert.alert('Error', 'Failed to check authentication status');
+      return false;
+    }
+  };
 
   const handleSubscribe = async () => {
-    await createCheckoutSession({
-      priceId: STRIPE_PRODUCTS.AI_AGENT.priceId,
-      mode: STRIPE_PRODUCTS.AI_AGENT.mode,
-      successUrl: `${window.location.origin}/success`,
-      cancelUrl: `${window.location.origin}/subscribe`,
-    });
+    // First, check authentication
+    const isAuth = await checkAuthStatus();
+    
+    if (!isAuth) return;
+
+    try {
+      await createCheckoutSession({
+        priceId: STRIPE_PRODUCTS.AI_AGENT.priceId,
+        mode: STRIPE_PRODUCTS.AI_AGENT.mode,
+        successUrl: `${window.location.origin}/success`,
+        cancelUrl: `${window.location.origin}/subscribe`,
+      });
+    } catch (error) {
+      console.error('Subscription error:', error);
+      Alert.alert('Subscription Error', 'Failed to create checkout session');
+    }
   };
 
   return (
